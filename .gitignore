@@ -1,0 +1,22 @@
+# 1. 你不想上传的个性化文件
+开机后教程.md
+backup/
+
+# 2. Python 运行产生的缓存（彻底干掉截图里那些烦人的 __pycache__）
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 3. 环境与日志
+.env
+.venv/
+env/
+venv/
+*.log
+
+# 4. 编辑器与系统文件
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

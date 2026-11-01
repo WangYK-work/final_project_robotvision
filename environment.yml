@@ -1,0 +1,16 @@
+name: virtual-painter
+channels:
+  - defaults
+dependencies:
+  - python=3.9
+  - pip
+  - pip:
+      # 核心视觉与追踪 (锁定兼容版本，必须用 opencv-contrib-python)
+      - mediapipe==0.10.21
+      - opencv-contrib-python==4.11.0.86
+      - numpy==1.26.4
+      
+      # Web 交互界面 (Gradio)
+      - gradio
+      - pydantic==2.10.6
+      - huggingface_hub==0.26.2
