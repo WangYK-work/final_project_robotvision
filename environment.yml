@@ -11,6 +11,6 @@ dependencies:
       - numpy==1.26.4
       
       # Web 交互界面 (Gradio)
-      - gradio
+      - gradio==4.44.1
       - pydantic==2.10.6
       - huggingface_hub==0.26.2
