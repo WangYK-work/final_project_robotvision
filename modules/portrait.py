@@ -11,6 +11,7 @@ class PortraitPainter:
         from modules.head_portrait import HeadPortrait
         self.head = HeadPortrait()
         self.duration = duration
+        self.job = None
         self.active = False
         self.cursor = None
         self.progress = 0
@@ -24,7 +25,14 @@ class PortraitPainter:
         palm = max(1.0, float(np.linalg.norm(np.subtract(points[5], points[17]))))
         return np.linalg.norm(np.subtract(points[8], points[12])) / palm > .25
 
-    def start(self, frame, canvas, bounds, now=None, style="gold"):
+    def start(self, frame, canvas, bounds, now=None, style="gold", strength=0.3):
+        if style in ("van_gogh", "picasso"):
+            from modules.neural_portrait import NeuralPortraitJob
+            self.cancel(canvas)
+            self.pending_alpha = None
+            # Use the untouched camera snapshot, including shoulders and background.
+            self.job = NeuralPortraitJob(frame.copy(), style, strength)
+            return
         if self.detector.empty():
             raise ValueError('人脸检测器加载失败，请检查 OpenCV 安装。')
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -37,11 +45,31 @@ class PortraitPainter:
         # Portrait placement is independent of the local viewport.
         self.begin_image(art, canvas, (0, 0, canvas.shape[1], canvas.shape[0]), now, alpha)
 
-    def begin_image(self, image, canvas, bounds, now=None, alpha=None):
+    @property
+    def busy(self):
+        return self.active or self.job is not None
+
+    def poll_generation(self, canvas, now=None):
+        if self.job is None:
+            return None
+        try:
+            image = self.job.poll()
+        except Exception:
+            self.job.cancel()
+            self.job = None
+            raise
+        if image is None:
+            return f"神经肖像生成中 {self.job.percent}%（加载模型阶段为 0%，可取消）"
+        self.job = None
+        self.begin_image(image, canvas, (0, 0, canvas.shape[1], canvas.shape[0]), now, self.pending_alpha, interpolation=cv2.INTER_LINEAR, full_frame=True)
+        self.pending_alpha = None
+        return "神经肖像生成完成，开始逐步绘制。"
+
+    def begin_image(self, image, canvas, bounds, now=None, alpha=None, interpolation=cv2.INTER_NEAREST, full_frame=False):
         x, y, width, height = bounds
-        scale = min(width * .90 / image.shape[1], height * .92 / image.shape[0])
+        scale = min(width / image.shape[1], height / image.shape[0]) if full_frame else min(width * .90 / image.shape[1], height * .92 / image.shape[0])
         tw, th = max(1, round(image.shape[1] * scale)), max(1, round(image.shape[0] * scale))
-        resized = cv2.resize(image, (tw, th), interpolation=cv2.INTER_NEAREST)
+        resized = cv2.resize(image, (tw, th), interpolation=interpolation)
         self.target = cv2.cvtColor(resized, cv2.COLOR_GRAY2BGR) if resized.ndim == 2 else resized
         self.x, self.y = x + (width - tw) // 2, y + (height - th) // 2
         self.backup = canvas[self.y:self.y + th, self.x:self.x + tw].copy()
@@ -79,6 +107,10 @@ class PortraitPainter:
         return not self.active
 
     def cancel(self, canvas):
+        if self.job is not None:
+            self.job.cancel()
+            self.job = None
+        self.pending_alpha = None
         if self.active:
             th, tw = self.backup.shape[:2]
             canvas[self.y:self.y + th, self.x:self.x + tw] = self.backup

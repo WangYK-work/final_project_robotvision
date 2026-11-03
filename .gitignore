@@ -20,3 +20,7 @@ venv/
 .idea/
 .DS_Store
 Thumbs.db
+# Local neural style weights, downloaded references and generated photos
+experiments/neural_style/models/
+experiments/neural_style/assets/
+experiments/neural_style/outputs/
