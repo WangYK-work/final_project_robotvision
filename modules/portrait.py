@@ -1,4 +1,4 @@
-"""Head cutout and progressive black/gold illustration drawing; no external model download."""
+œ"""Head cutout and progressive black/gold illustration drawing; no external model download."""
 import time
 import cv2
 import numpy as np

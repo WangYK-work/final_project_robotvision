@@ -1,4 +1,5 @@
 """Isolated neural style worker; the camera environment never imports PyTorch."""
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -17,12 +18,19 @@ class NeuralPortraitJob:
     def __init__(self, image, style, strength):
         if style not in ('van_gogh', 'picasso'):
             raise ValueError('未知神经画风。')
-        interpreter = Path(os.environ.get('AIRBOARD_NEURAL_PYTHON', str(Path(sys.prefix).parent / 'ai-learning' / ('python.exe' if os.name == 'nt' else 'bin/python'))))
+        override = os.environ.get('AIRBOARD_NEURAL_PYTHON')
+        if override:
+            interpreter = Path(override).expanduser()
+        elif all(importlib.util.find_spec(name) is not None for name in ('torch', 'torchvision')):
+            interpreter = Path(sys.executable)
+        else:
+            # Backward compatibility for the original two-environment setup.
+            interpreter = Path(sys.prefix).parent / 'ai-learning' / ('python.exe' if os.name == 'nt' else 'bin/python')
         if not interpreter.is_file():
-            raise ValueError('未找到神经网络 Python，请设置 AIRBOARD_NEURAL_PYTHON 为已安装 PyTorch 的 Python 路径。')
+            raise ValueError('缺少神经网络环境；请运行 python -m pip install -r requirements.txt，或设置 AIRBOARD_NEURAL_PYTHON。')
         reference = EXPERIMENT / 'assets' / (style + '.jpg')
         if not reference.is_file() or not (EXPERIMENT / 'models/vgg19-dcbb9e9d.pth').is_file():
-            raise ValueError('缺少画风素材或模型；请在 ai-learning 环境运行 experiments/neural_style/prepare.py。')
+            raise ValueError('缺少画风素材或模型；请在项目环境运行 experiments/neural_style/prepare.py。')
         self.temp = tempfile.TemporaryDirectory(prefix='airboard-portrait-')
         self.folder = Path(self.temp.name)
         self.output = self.folder / 'result.png'

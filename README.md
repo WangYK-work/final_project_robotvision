@@ -2,18 +2,57 @@
 
 基于摄像头双手交互的网页画板，支持局部绘画、全图预览、固定选色及自动肖像绘制。
 
-## 启动
+## 从 GitHub 克隆后启动（新同学）
 
-使用原来的 `virtual-painter` 环境，在项目目录运行：
+需要 Conda。推荐平台：Apple Silicon Mac、Windows x64、Linux x64；摄像头需授予系统权限。无 GPU 时可以 CPU 运行，但神经画风会慢很多，可能触发 5 分钟超时。Intel Mac 不在本套 PyTorch 锁定依赖的验证范围。
 
 ```bash
+git clone https://github.com/WangYK-work/final_project_robotvision.git
+cd final_project_robotvision
+# 如果功能尚在分支中，请先 git switch 到包含本 README 的分支
+conda env create -f environment.yml
 conda activate virtual-painter
+python experiments/neural_style/prepare.py
 python app.py
 ```
 
-浏览器打开终端给出的地址，默认 `http://127.0.0.1:7860`。若提示 7860 端口被占用，先关闭旧的运行实例；需要时可在 `app.py` 修改端口。
+打开终端显示的 http://127.0.0.1:7860 。摄像头由运行 Python 的电脑读取；重新运行前停止旧实例。
 
-新环境可使用项目中的 `environment.yml`，或在 Python 3.9 环境安装 `requirements.txt`。本次更新未增加依赖；人像功能使用已有 MediaPipe 和 OpenCV 随附模型，无需密钥或额外下载模型。摄像头由运行 Python 的电脑读取。
+只有一个 virtual-painter 环境就够了，已包含画板和 PyTorch，不需要另建 ai-learning，也不用复制别人的 Conda 目录。environment.yml 引用根目录 requirements.txt，确保两种安装方式使用相同依赖。PyTorch/torchvision 使用支持 Python 3.9 的 2.6.0/0.21.0 配对；没有直接复制原 ai-learning 中 Python 3.12 的全部依赖。
+
+已有环境的同学，在项目根目录更新：
+
+```bash
+conda activate virtual-painter
+python -m pip install -r requirements.txt
+python -m pip check
+python experiments/neural_style/prepare.py
+python app.py
+```
+
+## 模型与参考画如何分发
+
+GitHub **不包含模型权重和下载素材**。prepare.py 会从官方 PyTorch 地址下载约 549 MiB 的 VGG19 权重并校验 SHA256 前缀，同时下载梵高、毕加索参考图与公开测试照片。只需首次执行；已有正确文件会跳过，下载完成后可断网运行。
+
+必须准备的文件：
+
+- experiments/neural_style/models/vgg19-dcbb9e9d.pth
+- experiments/neural_style/assets/van_gogh.jpg
+- experiments/neural_style/assets/picasso.jpg
+- assets/portrait.png 仅独立样例测试需要，7 号拍照不需要。
+
+如果下载站点无法访问，可以由已下载的组员把上述文件通过共享盘传给其他人，按相同相对路径放好，再运行 prepare.py 验证。网络代理如有需要可给终端配置 HTTPS_PROXY（地址使用自己代理软件的实际端口）。运行时不会偷偷联网补模型；缺文件会在状态栏提示。
+
+提交 GitHub 应包含：core/、modules/、ui/、app.py、config.py、environment.yml、requirements.txt、experiments/neural_style/ 下的 Python 脚本与文档、tests/、README.md、开发指南.md、更新日志.md 和 .gitignore。不要上传 Conda 环境目录、models/、assets/、outputs/、私人照片与缓存。不要用 git add -f 强行添加权重。
+
+后台默认使用当前 Python，仍用独立进程计算，不阻塞相机；为兼容旧电脑，当前环境无 PyTorch 时尝试同级 ai-learning。特殊部署可设置 AIRBOARD_NEURAL_PYTHON 为 Python 可执行文件的绝对路径，其优先级最高。旧的个人环境路径无需写入仓库。
+
+验证安装：
+
+```bash
+python -c "import cv2, mediapipe as mp, torch, torchvision; print(cv2.__version__, mp.__version__, torch.__version__, torchvision.__version__); print('MediaPipe solutions:', hasattr(mp, 'solutions')); print('MPS:', torch.backends.mps.is_available(), 'CUDA:', torch.cuda.is_available())"
+python -m unittest discover -s tests -v
+```
 
 ## 界面
 
@@ -82,4 +121,4 @@ python app.py
 
 神经画风使用未经手部骨架标注的完整快照，不抠图；结果等比例铺入完整画板，比例不同时留边，覆盖范围内的原画被替换，取消未完成绘制会恢复。神经处理默认为长边 256 像素、200 步；画风和强度在拍摄时固定，途中修改只影响下一张。脸部仍可能出现纹理失真；毕加索参考主要迁移颜色与纹理，不保证五官重排。
 
-主程序仍使用 virtual-painter。后台自动查找同级 ai-learning 环境；如果不同，启动前设置 `AIRBOARD_NEURAL_PYTHON` 为装有 PyTorch 的 Python 可执行文件绝对路径。依赖与下载方法见 [神经样例指南](experiments/neural_style/README.md)。缺模型时会在状态栏提示，运行时不自动联网下载。临时照片只存本机，成功、失败或取消后清理；生成超时上限 5 分钟。
+主程序仍使用 virtual-painter。后台优先使用当前环境的 Python，兼容旧的同级 ai-learning 环境；如果不同，启动前设置 `AIRBOARD_NEURAL_PYTHON` 为装有 PyTorch 的 Python 可执行文件绝对路径。依赖与下载方法见 [神经样例指南](experiments/neural_style/README.md)。缺模型时会在状态栏提示，运行时不自动联网下载。临时照片只存本机，成功、失败或取消后清理；生成超时上限 5 分钟。

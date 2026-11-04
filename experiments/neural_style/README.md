@@ -1,13 +1,13 @@
 # 本地神经风格迁移实验
 
-这是可以独立运行的神经样例，也作为 7 号肖像的后台工作程序，不改变 virtual-painter 依赖。无需 API key，不上传照片。首次下载约 549 MiB 的官方 VGG19 权重，之后运行不需要网络。
+这是可以独立运行的神经样例，也作为 7 号肖像的后台工作程序，依赖已并入根目录 requirements.txt。无需 API key，不上传照片。首次下载约 549 MiB 的官方 VGG19 权重，之后运行不需要网络。
 
 ## 在这台 Mac 上运行
 
 在项目目录的终端执行：
 
 ```bash
-conda activate ai-learning
+conda activate virtual-painter
 # 已下载的文件会跳过；换电脑或缺少素材时执行
 python experiments/neural_style/prepare.py
 # 默认公开肖像 + 梵高《星月夜》，长边 256，200 步
